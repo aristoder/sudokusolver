@@ -26,7 +26,6 @@ class puzzle:
                 print(vline, ":", temp.confirmed, "\t",*temp.possible)
             print("")
 
-
     def presentinhline(self, hline, arg):
         for column_index in range(1,10):
             if self.puzzle[hline][column_index].confirmed==arg:
@@ -97,33 +96,54 @@ class puzzle:
         print(character)
 
     def solvebyhline(self, animate=False):
-        self.clearall()
+        anychange=False
         for hline in range(1,10):
             for checked_number in range(1,10):
                 if self.presentinhline(hline,checked_number):
-                    continue`
+                    continue
                 else:
+                    self.clearall()
+                    positionofpossibilities=[]
                     for vline in range(1,10):
-                        if self.puzzle[hline][vline].confirmed != 0:
+                        if self.puzzle[hline][vline].confirmed == 0:
                             if self.presentinvline(vline, checked_number):
                                 continue
                             if self.presentinblock(self.puzzle[hline][vline].block, checked_number):
                                 continue
                             self.puzzle[hline][vline].add(checked_number)
-        anychange=False
-        for hline in range(1,10):
-            for vline in range(1,10):
-                anythingchanged=False
-                if self.puzzle[hline][vline].confirmed != 0:
-                    anythingchanged=self.puzzle[hline][vline].converge()
-                if anythingchanged:
-                    anychange=True
-                    time.sleep(animationsleeptime)
-                    self.print
+                            positionofpossibilities.append(vline)
+                    if len(positionofpossibilities) == 1:
+                        self.puzzle[hline][positionofpossibilities[0]].converge()
+                        if animate:
+                            time.sleep(animationsleeptime)
+                            self.print()
+                        anychange=True
         return anychange
 
     def solvebyvline(self, animate=False):
-        pass
+        anychange=False
+        for vline in range(1,10):
+            for checked_number in range(1,10):
+                if self.presentinvline(vline,checked_number):
+                    continue
+                else:
+                    self.clearall()
+                    positionofpossibilities=[]
+                    for hline in range(1,10):
+                        if self.puzzle[hline][vline].confirmed == 0:
+                            if self.presentinhline(hline, checked_number):
+                                continue
+                            if self.presentinblock(self.puzzle[hline][vline].block, checked_number):
+                                continue
+                            self.puzzle[hline][vline].add(checked_number)
+                            positionofpossibilities.append(vline)
+                    if len(positionofpossibilities) == 1:
+                        self.puzzle[hline][positionofpossibilities[0]].converge()
+                        if animate:
+                            time.sleep(animationsleeptime)
+                            self.print()
+                        anychange=True
+        return anychange
 
     def solveparticularhline(self, hline, animate=False):
         pass
@@ -184,11 +204,11 @@ class puzzle:
                 if animate:
                     time.sleep(animationsleeptime)
                     self.print()
-            # progress=self.solvebyvline(animate=animate)
-            # if progress:
-            #     if animate:
-            #         time.sleep(animationsleeptime)
-            #         self.print()
+            progress=self.solvebyvline(animate=animate)
+            if progress:
+                if animate:
+                    time.sleep(animationsleeptime)
+                    self.print()
             # progress=self.solvebyblock(animate=animate)
             # if progress:
             #     if animate:
@@ -245,10 +265,11 @@ class cell:
         else:
             return False
 
-ot = [2,7,6,3,1,4,9,5,8,8,5,4,9,6,2,7,1,3,9,1,3,8,7,5,2,6,4,4,6,8,1,2,7,3,9,5,5,9,7,4,3,8,6,2,1,1,3,2,5,9,6,4,8,7,3,2,5,7,8,9,1,4,6,6,4,1,2,5,3,8,7,9,7,8,9,6,4,1,5,3,2]
-it = [2,7,6,3,1,4,0,5,8,8,5,4,9,6,2,7,1,3,9,1,3,8,7,5,2,6,0,4,6,8,1,2,7,3,9,5,5,9,7,4,3,8,6,0,1,1,3,2,5,9,6,4,0,7,3,2,5,7,8,9,1,4,6,6,4,1,2,5,3,8,7,9,7,8,9,6,4,1,5,3,2]
+# ot = [2,7,6,3,1,4,9,5,8,8,5,4,9,6,2,7,1,3,9,1,3,8,7,5,2,6,4,4,6,8,1,2,7,3,9,5,5,9,7,4,3,8,6,2,1,1,3,2,5,9,6,4,8,7,3,2,5,7,8,9,1,4,6,6,4,1,2,5,3,8,7,9,7,8,9,6,4,1,5,3,2]
+# it = [2,7,6,3,1,4,0,5,8,8,5,4,9,6,2,7,1,3,9,1,3,8,7,5,2,6,0,4,6,8,1,2,7,3,9,5,5,9,7,4,3,8,6,0,1,1,3,2,5,9,6,4,0,7,3,2,5,7,8,9,1,4,6,6,4,1,2,5,3,8,7,9,7,8,9,6,4,1,5,3,2]
 nt = [0,0,0,0,0,3,6,0,0,0,0,0,0,2,0,0,0,0,0,3,9,8,0,0,0,0,1,9,0,0,0,4,0,0,0,3,3,4,0,6,0,2,0,8,0,0,6,0,0,1,0,9,0,0,0,8,0,0,0,0,2,0,0,0,5,6,1,3,0,4,0,0,4,0,0,0,8,7,0,0,0]
 t=puzzle(*nt)
 t.print()
 input("Press enter to solve")
+t.print()
 t.solve(animate=True)
