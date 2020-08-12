@@ -18,7 +18,16 @@ class puzzle:
                 row[column_index + 1]=celltobeadded
             self.puzzle[row_index + 1]=row
 
-    def checkhline(self, hline, arg):
+    def debugcheck(self):
+        for hline in range(1,10):
+            print("Row", hline, ":")
+            for vline in range(1,10):
+                temp=self.puzzle[hline][vline]
+                print(vline, ":", temp.confirmed, "\t",*temp.possible)
+            print("")
+
+
+    def presentinhline(self, hline, arg):
         for column_index in range(1,10):
             if self.puzzle[hline][column_index].confirmed==arg:
                 break
@@ -28,7 +37,7 @@ class puzzle:
         # arg found
         return True
             
-    def checkvline(self, vline, arg):
+    def presentinvline(self, vline, arg):
         for row_index in range(1,10):
             if self.puzzle[row_index][vline].confirmed==arg:
                 break
@@ -38,7 +47,12 @@ class puzzle:
         # arg found
         return True
 
-    def checkblock(self, block, arg):
+    def clearall(self):
+        for hline in range(1,10):
+            for vline in range(1,10):
+                self.puzzle[hline][vline].clear()
+
+    def presentinblock(self, block, arg):
         for row_index in range(1,10):
             for column_index in range(1,10):
                 cell_obj=self.puzzle[row_index][column_index]
@@ -46,6 +60,9 @@ class puzzle:
                     if cell_obj.confirmed==arg:
                         return True
         return False
+
+    def notsolved(self):
+        return not self.issolved()
 
     def issolved(self):
         for hline in range(1,10):
@@ -80,7 +97,30 @@ class puzzle:
         print(character)
 
     def solvebyhline(self, animate=False):
-        pass
+        self.clearall()
+        for hline in range(1,10):
+            for checked_number in range(1,10):
+                if self.presentinhline(hline,checked_number):
+                    continue`
+                else:
+                    for vline in range(1,10):
+                        if self.puzzle[hline][vline].confirmed != 0:
+                            if self.presentinvline(vline, checked_number):
+                                continue
+                            if self.presentinblock(self.puzzle[hline][vline].block, checked_number):
+                                continue
+                            self.puzzle[hline][vline].add(checked_number)
+        anychange=False
+        for hline in range(1,10):
+            for vline in range(1,10):
+                anythingchanged=False
+                if self.puzzle[hline][vline].confirmed != 0:
+                    anythingchanged=self.puzzle[hline][vline].converge()
+                if anythingchanged:
+                    anychange=True
+                    time.sleep(animationsleeptime)
+                    self.print
+        return anychange
 
     def solvebyvline(self, animate=False):
         pass
@@ -98,23 +138,29 @@ class puzzle:
         pass
 
     def solvebypossibility(self, animate=False):
+        self.clearall()
         flag=True
         nothingchange=True
         while flag:
             anythingchangedinthisloop=False
+            # loop to fill all possibilities
             for hline in range(1,10):
                 for vline in range(1,10):
                     self.fillpossible(hline=hline, vline=vline)
+            # loop to check all the possibilities, and if singular->fill
             for hline in range(1,10):
                 for vline in range(1,10):
                     if self.puzzle[hline][vline].confirmed == 0:
-                        if self.puzzle[hline][vline].converge():
+                        if bool(self.puzzle[hline][vline].converge()):
+                            if animate:
+                                time.sleep(animationsleeptime)
+                                self.print()
                             anythingchangedinthisloop=True
                             nothingchange=False
+                    else:
+                        continue
             if anythingchangedinthisloop:
-                if animate:
-                    time.sleep(animationsleeptime)
-                    self.print()
+                pass
             else:
                 flag = False
         if nothingchange:
@@ -123,39 +169,49 @@ class puzzle:
             return True
 
     def solve(self, animate=False):
-        while self.issolved() == False:
+        notsolved=True
+        while notsolved:
+            anythingchanged=False
             progress=self.solvebypossibility(animate=animate)
             if progress:
+                anythingchanged=True
                 if animate:
                     time.sleep(animationsleeptime)
                     self.print()
             progress=self.solvebyhline(animate=animate)
             if progress:
+                anythingchanged=True
                 if animate:
                     time.sleep(animationsleeptime)
                     self.print()
-            progress=self.solvebyvline(animate=animate)
-            if progress:
-                if animate:
-                    time.sleep(animationsleeptime)
-                    self.print()
-            progress=self.solvebyblock(animate=animate)
-            if progress:
-                if animate:
-                    time.sleep(animationsleeptime)
-                    self.print()
+            # progress=self.solvebyvline(animate=animate)
+            # if progress:
+            #     if animate:
+            #         time.sleep(animationsleeptime)
+            #         self.print()
+            # progress=self.solvebyblock(animate=animate)
+            # if progress:
+            #     if animate:
+            #         time.sleep(animationsleeptime)
+            #         self.print()
+            if anythingchanged:
+                pass
+            else:
+                notsolved=self.notsolved()
+        self.print()
 
     def fillpossible(self, hline, vline):
         if self.puzzle[hline][vline].confirmed != 0:
+            self.puzzle[hline][vline].clear()
             return
         else:
             self.puzzle[hline][vline].clear()
         for checked_number in range(1,10):
-            if self.checkhline(hline=hline, arg=checked_number):
+            if self.presentinhline(hline=hline, arg=checked_number):
                 continue
-            if self.checkvline(vline=vline, arg=checked_number):
+            if self.presentinvline(vline=vline, arg=checked_number):
                 continue
-            if self.checkblock(block=self.puzzle[hline][vline].block, arg=checked_number):
+            if self.presentinblock(block=self.puzzle[hline][vline].block, arg=checked_number):
                 continue
             self.puzzle[hline][vline].add(checked_number)
 
@@ -173,19 +229,21 @@ class cell:
 
     def clear(self):
         self.possible=[]
-    
+ 
     def remove(self, arg):
         if arg in self.possible:
             self.possible.remove(arg)
 
     def converge(self):
-        if len(self.possible) == 1:
-            self.confirmed=self.possible[0]
-            self.clear()
-            return self.confirmed
+        if self.confirmed == 0:
+            if len(self.possible) == 1:
+                self.confirmed=self.possible[0]
+                self.clear()
+                return True
+            else:
+                return False
         else:
             return False
-
 
 ot = [2,7,6,3,1,4,9,5,8,8,5,4,9,6,2,7,1,3,9,1,3,8,7,5,2,6,4,4,6,8,1,2,7,3,9,5,5,9,7,4,3,8,6,2,1,1,3,2,5,9,6,4,8,7,3,2,5,7,8,9,1,4,6,6,4,1,2,5,3,8,7,9,7,8,9,6,4,1,5,3,2]
 it = [2,7,6,3,1,4,0,5,8,8,5,4,9,6,2,7,1,3,9,1,3,8,7,5,2,6,0,4,6,8,1,2,7,3,9,5,5,9,7,4,3,8,6,0,1,1,3,2,5,9,6,4,0,7,3,2,5,7,8,9,1,4,6,6,4,1,2,5,3,8,7,9,7,8,9,6,4,1,5,3,2]
