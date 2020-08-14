@@ -1,22 +1,28 @@
 import time
-animationsleeptime=0.7
+from os import system
+# animationsleeptime=0.3
 
 class puzzle:
-    def __init__(self, *cells):
+    def __init__(self, *cells, recursivecount=0, recursivelimit=2, gui=False):
         if len(cells) != 81:
             raise ValueError
         self.puzzle={}
-        for row_index in range(9):
-            row={}
-            for column_index in range(9):
-                data=cells[(row_index*9) + column_index]
-                # might remove the first "if"
-                if data==" ":
-                    data=0
-                if data>=0 and data<=9:
-                    celltobeadded=cell(hline=row_index+1, vline=column_index+1, block=((int(row_index/3)*3) + int(column_index/3)) + 1, confirmed=data)
-                row[column_index + 1]=celltobeadded
-            self.puzzle[row_index + 1]=row
+        self.recursivecount=recursivecount
+        self.recursivelimit=recursivelimit
+        if gui:
+            pass
+        else:
+            for row_index in range(9):
+                row={}
+                for column_index in range(9):
+                    data=cells[(row_index*9) + column_index]
+                    # might remove the first "if"
+                    if data==" ":
+                        data=0
+                    if data>=0 and data<=9:
+                        celltobeadded=cell(hline=row_index+1, vline=column_index+1, block=((int(row_index/3)*3) + int(column_index/3)) + 1, confirmed=data)
+                    row[column_index + 1]=celltobeadded
+                self.puzzle[row_index + 1]=row
 
     def debugcheck(self):
         for hline in range(1,10):
@@ -46,6 +52,16 @@ class puzzle:
         # arg found
         return True
 
+    def checkifright(self):
+        return True
+
+    def export(self):
+        returndata=[]
+        for hline in range(1,10):
+            for vline in range(1,10):
+                returndata.append(self.puzzle[hline][vline].confirmed)
+        return returndata
+
     def clearall(self):
         for hline in range(1,10):
             for vline in range(1,10):
@@ -63,6 +79,43 @@ class puzzle:
     def notsolved(self):
         return not self.issolved()
 
+    def solvebyguessing(self):
+        if self.recursivecount == 0:
+            for recursivelimit in range(2,10):
+                self.recursivelimit=recursivelimit
+                solved=self.solverecursivly()
+                if solved:
+                    return True
+        else:
+            return self.solverecursivly()
+        return False
+
+    def solverecursivly(self):
+        if self.recursivecount>=self.recursivelimit:
+            return False
+        for hline in range(1,10):
+            for vline in range(1,10):
+                if self.puzzle[hline][vline].confirmed==0:
+                    for checked_number in range(1,10):
+                        if not self.presentinblock(block=self.puzzle[hline][vline].block, arg=checked_number) and not self.presentinhline(hline=hline, arg=checked_number) and not self.presentinvline(vline=vline, arg=checked_number):
+                            logtext=str(self.recursivecount)+" guessing [" + str(hline) + "][" + str(vline) + "]\tChecked number:" + str(checked_number)
+                            command="echo " + logtext + " >> logfile.txt"
+                            system(command)
+                            newpuzzle=puzzle(*self.export(), recursivecount=(self.recursivecount+1), recursivelimit=self.recursivelimit)
+                            newpuzzle.puzzle[hline][vline].confirmed=checked_number
+                            newpuzzle.print()
+                            if self.recursivecount > 4:
+                                print(self.recursivelimit)
+                                input()
+                            f=open("logfile.txt")
+                            print(f.read())
+                            solved=newpuzzle.solve(printatlast=False, animationsleeptime=0)
+                            if solved:
+                                for hline in range(1,10):
+                                    for vline in range(1,10):
+                                        self.puzzle[hline][vline].confirmed=newpuzzle.puzzle[hline][vline].confirmed
+                                return True
+
     def issolved(self):
         for hline in range(1,10):
             for vline in range(1,10):
@@ -71,31 +124,54 @@ class puzzle:
         else:
             return True
 
-    def print(self, toclear=True):
+    def print(self, toclear=True, printtofile=False, filename=None):
         if toclear:
-            import os
-            os.system("clear")
-        for row_index in range(1,10):
-            if row_index == 1 or row_index == 4 or row_index == 7:
-                self.printlineforsudoku()
-            for column_index in range(1,10):
-                if column_index == 1:
-                    print("| ", end="")
-                elif column_index == 4 or column_index == 7:
-                    print("| ", end="")
-                value=self.puzzle[row_index][column_index].confirmed
-                if value==0:
-                    value = " "
-                print(value, end=" ")
-            print("|")
-        self.printlineforsudoku()
+            system("clear")
+        if printtofile:
+            if filename==None:
+                raise FileNotFoundError
+            f=open(filename,"w")
+            for row_index in range(1,10):
+                line=""
+                if row_index==1 or row_index==4 or row_index==7:
+                    f.write(self.printlineforsudoku(returnback=True)+"\n")
+                for column_index in range(1,10):
+                    if column_index==1 or column_index==4 or column_index==7:
+                        line+="| "
+                    if self.puzzle[row_index][column_index].confirmed==0:
+                        line+="  "
+                    else:
+                        line+=str(self.puzzle[row_index][column_index].confirmed)+" "
+                line+="|"
+                f.write(line+"\n")
+            f.write(self.printlineforsudoku(returnback=True)+"\n")
+            f.close()
+        else:
+            for row_index in range(1,10):
+                if row_index == 1 or row_index == 4 or row_index == 7:
+                    self.printlineforsudoku()
+                for column_index in range(1,10):
+                    if column_index == 1:
+                        print("| ", end="")
+                    elif column_index == 4 or column_index == 7:
+                        print("| ", end="")
+                    value=self.puzzle[row_index][column_index].confirmed
+                    if value==0:
+                        value = " "
+                    print(value, end=" ")
+                print("|")
+            self.printlineforsudoku()
     
-    def printlineforsudoku(self, length=12, character=chr(0x2015)):
+    def printlineforsudoku(self, length=25, character=chr(0x2015), returnback=False):
+        texttoprint=""
         for i in range(length):
-            print(character, end=character)
-        print(character)
+            texttoprint=texttoprint+character
+        if returnback:
+            return texttoprint
+        else:
+            print(texttoprint)
 
-    def solvebyhline(self, animate=False):
+    def solvebyhline(self, animate=False, animationsleeptime=0.3):
         anychange=False
         for hline in range(1,10):
             for checked_number in range(1,10):
@@ -120,7 +196,7 @@ class puzzle:
                         anychange=True
         return anychange
 
-    def solvebyvline(self, animate=False):
+    def solvebyvline(self, animate=False, animationsleeptime=0.3):
         anychange=False
         for vline in range(1,10):
             for checked_number in range(1,10):
@@ -136,9 +212,9 @@ class puzzle:
                             if self.presentinblock(self.puzzle[hline][vline].block, checked_number):
                                 continue
                             self.puzzle[hline][vline].add(checked_number)
-                            positionofpossibilities.append(vline)
+                            positionofpossibilities.append(hline)
                     if len(positionofpossibilities) == 1:
-                        self.puzzle[hline][positionofpossibilities[0]].converge()
+                        self.puzzle[positionofpossibilities[0]][vline].converge()
                         if animate:
                             time.sleep(animationsleeptime)
                             self.print()
@@ -151,8 +227,33 @@ class puzzle:
     def solveparticularvline(self, vline, animate=False):
         pass
 
-    def solvebyblock(self, animate=False):
-        pass
+    def solvebyblock(self, animate=False, animationsleeptime=0.3):
+        anychange=False
+        for block in range(1,10):
+            # checking for each number
+            for checked_number in range(1,10):
+                if self.presentinblock(block=block, arg=checked_number):
+                    continue            # already present
+                else:
+                    self.clearall()     # prep
+                    positionofpossibilities=[]
+                    for hline in range(1,10):
+                        for vline in range(1,10):
+                            if self.puzzle[hline][vline].block==block:
+                                if self.puzzle[hline][vline].confirmed==0:
+                                    if self.presentinhline(hline=hline, arg=checked_number):
+                                        continue
+                                    if self.presentinvline(vline=vline, arg=checked_number):
+                                        continue
+                                    self.puzzle[hline][vline].add(checked_number)
+                                    positionofpossibilities.append({"hline":hline, "vline":vline})
+                    if len(positionofpossibilities)==1:
+                        anychange=True
+                        self.puzzle[positionofpossibilities[0]["hline"]][positionofpossibilities[0]["vline"]].converge()
+                        if animate:
+                            time.sleep(animationsleeptime)
+                            self.print()
+        return anychange
 
     def solveparticularblock(self, animate=False):
         pass
@@ -188,37 +289,59 @@ class puzzle:
         else:
             return True
 
-    def solve(self, animate=False):
+    def solve(self, animate=False, logoutput=False, animationsleeptime=0.3, printatlast=True):
+        if self.recursivecount==0:
+            system("rm logfile.txt")
         notsolved=True
+        flag=False
         while notsolved:
             anythingchanged=False
-            progress=self.solvebypossibility(animate=animate)
+            # solve by horizontal line
+            progress=self.solvebyhline(animate=animate, animationsleeptime=animationsleeptime)
             if progress:
                 anythingchanged=True
                 if animate:
-                    time.sleep(animationsleeptime)
                     self.print()
-            progress=self.solvebyhline(animate=animate)
+            # sovle by vertical line
+            progress=self.solvebyvline(animate=animate, animationsleeptime=animationsleeptime)
             if progress:
                 anythingchanged=True
                 if animate:
-                    time.sleep(animationsleeptime)
                     self.print()
-            progress=self.solvebyvline(animate=animate)
+            # solve by block
+            progress=self.solvebyblock(animate=animate, animationsleeptime=animationsleeptime)
             if progress:
+                anythingchanged=True
                 if animate:
-                    time.sleep(animationsleeptime)
                     self.print()
-            # progress=self.solvebyblock(animate=animate)
-            # if progress:
-            #     if animate:
-            #         time.sleep(animationsleeptime)
-            #         self.print()
+                    time.sleep(animationsleeptime)
             if anythingchanged:
                 pass
             else:
-                notsolved=self.notsolved()
-        self.print()
+                notsolved=self.notsolved()  # break if solved
+                if flag:                    # stays off the first time
+                    progress=self.solvebyguessing()
+                    if progress:
+                        anythingchanged=True
+                        if animate:
+                            self.print()
+                            time.sleep(animationsleeptime)
+                    else:
+                        clearlogfile("logfile.txt", pre=(self.recursivecount)-1)
+                        break
+                    pass
+                flag=True                   # flags that it wasn't solved the last time too
+        if printatlast:
+            self.print()
+        if notsolved:
+            if logoutput:
+                print("Either there has been an error or the given sudoku had logical fallacies.")
+                input("")
+            return False
+        else:
+            self.print()
+            print("Sudoku solved!")
+            return True
 
     def fillpossible(self, hline, vline):
         if self.puzzle[hline][vline].confirmed != 0:
@@ -235,6 +358,17 @@ class puzzle:
                 continue
             self.puzzle[hline][vline].add(checked_number)
 
+def clearlogfile(filename, pre):
+    tempfile=".tempfile.txt"
+    system("tail -n 1 " + filename + " > .tempfile.txt")
+    File=open(tempfile)
+    # input("Stop.."+str(pre))
+    if int(File.read().split()[0])==int(pre):
+        system("cat " + filename+" | head -n -1 > " + tempfile)
+        system("rm "+filename)
+        system("mv "+tempfile+ " "+filename)
+    # input("Stop..")
+    
 
 class cell:
     def __init__(self, hline, vline, block, confirmed=0, possible=[]):
@@ -265,11 +399,12 @@ class cell:
         else:
             return False
 
-# ot = [2,7,6,3,1,4,9,5,8,8,5,4,9,6,2,7,1,3,9,1,3,8,7,5,2,6,4,4,6,8,1,2,7,3,9,5,5,9,7,4,3,8,6,2,1,1,3,2,5,9,6,4,8,7,3,2,5,7,8,9,1,4,6,6,4,1,2,5,3,8,7,9,7,8,9,6,4,1,5,3,2]
-# it = [2,7,6,3,1,4,0,5,8,8,5,4,9,6,2,7,1,3,9,1,3,8,7,5,2,6,0,4,6,8,1,2,7,3,9,5,5,9,7,4,3,8,6,0,1,1,3,2,5,9,6,4,0,7,3,2,5,7,8,9,1,4,6,6,4,1,2,5,3,8,7,9,7,8,9,6,4,1,5,3,2]
-nt = [0,0,0,0,0,3,6,0,0,0,0,0,0,2,0,0,0,0,0,3,9,8,0,0,0,0,1,9,0,0,0,4,0,0,0,3,3,4,0,6,0,2,0,8,0,0,6,0,0,1,0,9,0,0,0,8,0,0,0,0,2,0,0,0,5,6,1,3,0,4,0,0,4,0,0,0,8,7,0,0,0]
-t=puzzle(*nt)
-t.print()
-input("Press enter to solve")
-t.print()
-t.solve(animate=True)
+et = [0,0,0,0,0,3,6,0,0,0,0,0,0,2,0,0,0,0,0,3,9,8,0,0,0,0,1,9,0,0,0,4,0,0,0,3,3,4,0,6,0,2,0,8,0,0,6,0,0,1,0,9,0,0,0,8,0,0,0,0,2,0,0,0,5,6,1,3,0,4,0,0,4,0,0,0,8,7,0,0,0]
+mt = [0,0,0,3,0,0,0,0,0,0,0,5,0,0,0,0,0,6,0,9,0,6,0,4,8,1,7,5,0,6,9,0,0,0,0,0,0,0,0,0,0,3,0,0,5,0,0,1,0,2,0,4,0,0,0,0,9,0,0,7,0,3,2,0,0,7,0,0,0,5,6,0,0,6,2,0,8,0,7,0,0]
+ht = [0,0,5,0,0,0,9,0,0,0,0,4,6,9,0,1,0,0,7,9,0,0,0,0,0,0,0,0,1,0,2,0,0,0,0,3,0,7,0,0,0,6,0,8,0,0,0,0,0,1,4,6,0,2,2,3,0,0,0,8,0,0,0,0,0,0,0,5,0,0,0,7,0,0,0,4,0,3,0,1,0]
+if __name__ == "__main__":
+    t=puzzle(*ht)
+    t.print()
+    input("Press enter to solve")
+    t.print()
+    t.solve(animate=True, logoutput=True)
